@@ -39,7 +39,13 @@ The file `occurrences.csv` must contain **3 columns**:
 ---
 
 ## Usage
+
+Install the requirements in a virtual environement (recommended): 
+```bash
+pip install -r requirements.txt
+```
 Run the script from the command line and use the interactive prompts:
 
 ```bash
 python map_species.py
+```
