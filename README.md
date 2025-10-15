@@ -12,8 +12,9 @@ It can:
 
 ## Directory structure
 - `map_species.py` – Python script to generate species maps  
-- `inputs/occurrences.csv` – Example dataset of occurrence records  
-
+- `inputs/occurrences.csv` – Example dataset of occurrence records
+  
+```
 your-project/
 ├─ map_species.py
 ├─ README.md
@@ -21,6 +22,7 @@ your-project/
 ├─ inputs/
 │ └─ occurrences.csv # small test file (provided below)
 └─ outputs/ # created automatically for results
+```
 ---
 
 ## Input data
