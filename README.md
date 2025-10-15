@@ -1,4 +1,4 @@
-# 🐍 Python for Biologists – Autumn 2025
+# Python for Biologists – Autumn 2025
 **Author:** Justine Pagnier
 
 Interactive mapping of marine species occurrences using **Folium** (Leaflet).  
