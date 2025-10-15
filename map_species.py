@@ -284,7 +284,7 @@ def evaluate_detection(species_name, lat, lon, nn_outlier_km=200.0):
     # Pick the species subset (exact match on your cleaned df)
     subset = df[df["species"] == species_name].copy()
     if subset.empty:
-        print(f'⚠️ No rows for species "{species_name}" in the CSV.')
+        print(f' !! No rows for species "{species_name}" in the CSV.')
         return
 
     # Build points list
@@ -334,7 +334,7 @@ def evaluate_detection(species_name, lat, lon, nn_outlier_km=200.0):
 
         out_html = out_path.with_name(f"{species_name}_new_detection_check.html")
         local_map.save(str(out_html))
-        print(f"🔎 Map with hull & new point: {out_html}")
+        print(f"Map with hull & new point: {out_html}")
     except Exception as e:
         print(f"(Could not create local map for the detection: {e})")
 
@@ -347,9 +347,10 @@ def evaluate_detection(species_name, lat, lon, nn_outlier_km=200.0):
         f.write(f"Nearest known point (km): {nn_km:.2f}\n")
         f.write(f"Outlier threshold (km): {nn_outlier_km:.1f}\n")
         f.write(f"NN farther than threshold? {nn_flag}\n")
-    print(f"📝 Result saved to: {res_txt}")
+    print(f"Result saved to: {res_txt}")
 
 # ---- NEW DETECTION CHECK ----
 if DO_CHECK:
     evaluate_detection(species_name=species, lat=NEW_LAT, lon=NEW_LON, nn_outlier_km=NEW_THR)
+
 
