@@ -15,7 +15,7 @@ from statistics import mean     #little computation needed to center the map in 
 # ----------------------------
 DO_SINGLE = True
 DO_ALL    = False
-DO_CHECK  = False  # "single + check a new point"
+DO_CHECK  = False 
 
 # If args exist, keep working as before; otherwise prompt interactively
 if len(sys.argv) >= 3:
@@ -82,7 +82,6 @@ if DO_SINGLE:
         avail = ", ".join(sorted(map(str, df["species"].dropna().unique())))
         sys.exit(f'No rows for species "{species}". Available (first 10): {avail}')
 
-    # (everything you already have for the single map)
     # Library folium documentation: https://python-visualization.github.io/folium/latest/user_guide.html
     # Tell the program where to center the map based on the given coordinates, how much to zoom and which tiles to use
     # Other tiles can be explore here: https://leaflet-extras.github.io/leaflet-providers/preview/ 
@@ -113,7 +112,7 @@ if DO_SINGLE:
     print(f"Points mapped: {len(sp_df)}")
     print(f"Map saved to : {out_path}")
 
-    # --- clustered map (unchanged) ---
+    # --- clustered map  ---
     from folium.plugins import MarkerCluster
 
     cluster_map = folium.Map(location=(center_lat, center_lon), zoom_start=3, tiles="OpenStreetMap.Mapnik")
@@ -137,7 +136,7 @@ if DO_SINGLE:
     cluster_map.save(str(cluster_out))
     print(f"Clustered map saved to: {cluster_out}")
 
-    # --- heatmap (unchanged) ---
+    # --- heatmap ---
     from folium.plugins import HeatMap
 
     heat_map = folium.Map(location=(center_lat, center_lon), zoom_start=3, tiles="OpenStreetMap.Mapnik")
@@ -160,10 +159,10 @@ if DO_ALL:
     from folium import FeatureGroup, LayerControl
     from folium.plugins import MarkerCluster
 
-    # toggle: set to True if you want clustered markers (faster with many points)
+    # toggle: set to True if you want clustered markers
     USE_CLUSTERS = True
 
-    # 1) collect unique species (cleaned) and pick colors
+    # collect unique species (cleaned) and pick colors
     all_df = df.dropna(subset=["species", "latitude", "longitude"]).copy()
     all_df["species"] = all_df["species"].astype(str).str.strip()
     species_list = sorted(all_df["species"].unique())
@@ -175,7 +174,7 @@ if DO_ALL:
         "gray","black","lightgray"
     ]
 
-    # 2) center + bounds for the whole dataset
+    # center + bounds for the whole dataset
     all_min_lat, all_max_lat = float(all_df["latitude"].min()),  float(all_df["latitude"].max())
     all_min_lon, all_max_lon = float(all_df["longitude"].min()), float(all_df["longitude"].max())
     all_center_lat = float(all_df["latitude"].mean())
@@ -183,7 +182,7 @@ if DO_ALL:
 
     all_map = folium.Map(location=(all_center_lat, all_center_lon), zoom_start=2, tiles="OpenStreetMap.Mapnik")
 
-    # 3) add one layer per species
+    # add one layer per species
     for idx, sp in enumerate(species_list):
         color = COLORS[idx % len(COLORS)]
         layer = FeatureGroup(name=sp, show=(idx < 8))  # show first few layers by default
@@ -209,25 +208,17 @@ if DO_ALL:
 
         layer.add_to(all_map)
 
-    # 4) nice UX: fit to bounds and add layer control
+    #  fit to bounds and add layer control
     all_map.fit_bounds([[all_min_lat, all_min_lon], [all_max_lat, all_max_lon]])
     LayerControl(collapsed=False).add_to(all_map)
 
-    # 5) save
+    # save
     all_out = out_path.with_name("all_species_layers.html")
     all_map.save(str(all_out))
     print(f"All-species layered map saved to: {all_out}")
 
 
-
-
-
-
-
-# =========================================================
-# OPTIONAL: interactive "is this detection out of range?"
-# Paste below your last print(...) line
-# =========================================================
+# ---- CHECK MODE ----
 import math
 
 # Calculate the straight-line distance (in km) between two locations, accounting for the planet’s curvature.
@@ -244,8 +235,14 @@ def haversine_km(lat1, lon1, lat2, lon2):
     a = math.sin(da/2)**2 + math.cos(lat_r_1)*math.cos(lat_r_2)*math.sin(do/2)**2
     return 2 * radius * math.asin(math.sqrt(a))
 
-# build convex hull around the points 
+# build convex hull around the points (https://en.wikibooks.org/wiki/Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain)
 # aka. the smallest convex polygon that contains all the points
+# 1. Sort all points by longitude (x) and then by latitude (y). → This orders occurrences from left to right on the map.
+# 2. Build two “chains”: A lower hull (tracing the southern boundary) + An upper hull (tracing the northern boundary)
+# Each chain is built by adding points one by one and checking whether each new point makes a “right turn” or “left turn.”
+# If a point makes the shape bend inward (non-convex), it’s removed.
+# This “cross product” test keeps only the outermost points.
+# When both chains are complete, they’re joined to form the full convex polygon.
 def convex_hull_latlon(points):
     # points: list of (lat, lon)
     P = sorted(points, key=lambda x: (x[1], x[0]))  # sort by lon, then lat
@@ -267,13 +264,13 @@ def convex_hull_latlon(points):
     hull = lower[:-1] + upper[:-1]
     return hull
 
-# Ray casting point-in-polygon for lat/lon tuples
+# Ray casting point-in-polygon for lat/lon tuples (https://en.wikipedia.org/wiki/Point_in_polygon)
 def point_in_polygon(point, polygon):
     # point: (lat, lon); polygon: list[(lat, lon)]
     x, y = point[1], point[0]  # use lon=x, lat=y for 2D test
-    inside = False
+    inside = False # initialize
     n = len(polygon)
-    if n < 3:
+    if n < 3: # safety check
         return False
     for i in range(n):
         x1, y1 = polygon[i][1], polygon[i][0]
@@ -341,7 +338,7 @@ def evaluate_detection(species_name, lat, lon, nn_outlier_km=200.0):
     except Exception as e:
         print(f"(Could not create local map for the detection: {e})")
 
-    # Write a tiny TXT result
+    # Write a small log or txt file for the result recap
     res_txt = out_path.with_name(f"{species_name}_new_detection_result.txt")
     with open(res_txt, "w", encoding="utf-8") as f:
         f.write(f"Species: {species_name}\n")
@@ -355,3 +352,4 @@ def evaluate_detection(species_name, lat, lon, nn_outlier_km=200.0):
 # ---- NEW DETECTION CHECK ----
 if DO_CHECK:
     evaluate_detection(species_name=species, lat=NEW_LAT, lon=NEW_LON, nn_outlier_km=NEW_THR)
+
